@@ -13,4 +13,5 @@ wayland_protocols_dep = dependency('wayland-protocols')
 libinput_dep          = dependency('libinput')
 libudev_dep           = dependency('libudev')
 
+subdir('protocols')
 subdir('src')

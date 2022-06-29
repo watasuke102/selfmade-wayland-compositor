@@ -6,10 +6,16 @@ int
 main(void)
 {
   struct y11_compositor* compositor;
+  struct y11_xdg_shell_desktop* desktop;
   const char* socket;
 
   compositor = y11_compositor_create();
   if (compositor == NULL) {
+    return 1;
+  }
+
+  desktop = y11_xdg_shell_desktop_create(compositor);
+  if (desktop == NULL) {
     return 1;
   }
 
