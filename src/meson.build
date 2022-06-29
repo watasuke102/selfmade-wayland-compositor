@@ -1,8 +1,10 @@
 executable (
   'compositor',
-  ['main.c'],
+  ['main.c', 'compositor.c'],
   dependencies: [
-    dep_wayland_server,
+    wayland_server_dep,
+    libinput_dep,
+    libudev_dep,
   ],
   install: false,
 )
