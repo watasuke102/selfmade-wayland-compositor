@@ -87,6 +87,15 @@ struct y11_xdg_surface*
 y11_xdg_surface_create(struct wl_client* client, struct y11_surface* surface,
                        struct y11_xdg_shell_desktop_client* desktop_client, uint32_t version, uint32_t id);
 
+// xdg toplevel
+struct y11_xdg_toplevel {
+  struct y11_xdg_surface* surface;
+};
+
+struct y11_xdg_toplevel*
+y11_xdg_toplevel_create(struct wl_client* client, struct y11_xdg_surface* xdg_surface, uint32_t version,
+                        uint32_t id);
+
 // output
 struct y11_output {
   struct wl_list clients;

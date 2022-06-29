@@ -1,4 +1,5 @@
 #include <wayland-server.h>
+#include<stdio.h>
 
 #include "xdg-shell-server-protocol.h"
 #include "y11.h"
@@ -41,8 +42,10 @@ y11_xdg_shell_desktop_client_protocol_get_xdg_surface(struct wl_client* client, 
   desktop_client = wl_resource_get_user_data(resource);
   surface = wl_resource_get_user_data(surface_resource);
 
+  printf("dead?\n");
   xdg_surface =
       y11_xdg_surface_create(client, surface, desktop_client, wl_resource_get_version(resource), id);
+  printf("alive\n");
   if (xdg_surface == NULL) {
     // TODO
   }
