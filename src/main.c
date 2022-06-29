@@ -13,7 +13,7 @@ main(void)
     return 1;
   }
 
-  // wl_display_init_shm(compositor->display);
+  wl_display_init_shm(compositor->display);
 
   socket = wl_display_add_socket_auto(compositor->display);
   if (socket == NULL) {
