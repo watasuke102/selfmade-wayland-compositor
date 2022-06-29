@@ -74,6 +74,19 @@ struct y11_xdg_shell_desktop {
 struct y11_xdg_shell_desktop*
 y11_xdg_shell_desktop_create(struct y11_compositor* compositor);
 
+// xdg surface
+struct y11_xdg_surface {
+  struct wl_list link;
+  struct wl_resource* resource;
+  struct y11_surface* surface;
+  struct y11_xdg_shell_desktop_client* desktop_client;
+  struct wl_listener surface_commit_listener;
+};
+
+struct y11_xdg_surface*
+y11_xdg_surface_create(struct wl_client* client, struct y11_surface* surface,
+                       struct y11_xdg_shell_desktop_client* desktop_client, uint32_t version, uint32_t id);
+
 // output
 struct y11_output {
   struct wl_list clients;

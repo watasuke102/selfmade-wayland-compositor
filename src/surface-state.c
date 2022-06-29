@@ -21,6 +21,8 @@ y11_surface_state_create(struct wl_client* client)
   surface_state->sy = 0;
   surface_state->callback = NULL;
 
+  return surface_state;
+
 no_mem_surface_state:
   wl_client_post_no_memory(client);
   return NULL;
