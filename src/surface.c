@@ -5,13 +5,184 @@
 
 #include "y11.h"
 
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-struct y11_surface*
-y11_surface_create(struct wl_client* client, struct y11_compositor* compositor, uint32_t version, uint32_t id)
+static void
+y11_surface_handle_destroy(struct wl_resource *resource)
 {
-  struct y11_surface* surface;
-  struct wl_resource* resource;
-  struct y11_surface_state* surface_state;
+  struct y11_surface *surface;
+  surface = wl_resource_get_user_data(resource);
+  y11_surface_destroy(surface);
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void
+y11_surface_protocol_destroy(struct wl_client *client, struct wl_resource *resource)
+{
+  wl_resource_destroy(resource);
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void
+y11_surface_protocol_attach(struct wl_client *client, struct wl_resource *resource,
+                            struct wl_resource *buffer_resource, int32_t x, int32_t y)
+{
+  struct y11_surface *surface = wl_resource_get_user_data(resource);
+  surface->pending->buffer_resource = buffer_resource;
+  surface->pending->sx = x;
+  surface->pending->sy = y;
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void
+y11_surface_protocol_damage(struct wl_client *client, struct wl_resource *resource, int32_t x, int32_t y,
+                            int32_t width, int32_t height)
+{
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void
+y11_surface_protocol_frame(struct wl_client *client, struct wl_resource *resource, uint32_t id)
+{
+  struct y11_surface *surface;
+  struct y11_callback *callback;
+
+  callback = y11_callback_create(client, id);
+  if (callback == NULL) {
+    return;
+  }
+
+  surface = wl_resource_get_user_data(resource);
+  surface->pending->callback = callback;
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void
+y11_surface_protocol_set_opaque_region(struct wl_client *client, struct wl_resource *resource,
+                                       struct wl_resource *region_resource)
+{
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void
+y11_surface_protocol_set_input_region(struct wl_client *client, struct wl_resource *resource,
+                                      struct wl_resource *region_resource)
+{
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void
+y11_surface_protocol_commit(struct wl_client *client, struct wl_resource *resource)
+{
+  struct y11_surface *surface;
+
+  surface = wl_resource_get_user_data(resource);
+
+  if (surface->pending->buffer_resource != NULL) {
+    struct wl_shm_buffer *shm_buffer = wl_shm_buffer_get(surface->pending->buffer_resource);
+    uint32_t stride = wl_shm_buffer_get_stride(shm_buffer);
+    uint32_t width = wl_shm_buffer_get_width(shm_buffer);
+    uint32_t height = wl_shm_buffer_get_height(shm_buffer);
+    uint32_t format = wl_shm_buffer_get_format(shm_buffer);
+    uint32_t size = stride * height;
+    uint8_t *data = wl_shm_buffer_get_data(shm_buffer);
+
+    fprintf(stdout, "Reading data [%d x %d] %d bytes (format: %d)\n", width, height, size, format);
+    fflush(stdout);
+
+    char *NO_HEAD = getenv("NO_HEAD");
+    if (NO_HEAD == NULL || strcmp(NO_HEAD, "1")) {
+      // print the shape to stdout
+      // Supported format
+      // 0. 32-bit ARGB format, [31:0] A:R:G:B 8:8:8:8 little endian
+      // 1. 32-bit RGB format, [31:0] x:R:G:B 8:8:8:8 little endian
+      if (format == 0 || format == 1) {
+        FILE *file = stdout;
+        fprintf(file, "\x1b[0;0H");  // move cursor to (0, 0)
+        wl_shm_buffer_begin_access(shm_buffer);
+        for (uint32_t y = 0; y < height; y++) {
+          for (uint32_t x = 0; x < width; x++) {
+            uint8_t *b = data++;
+            uint8_t *g = data++;
+            uint8_t *r = data++;
+            uint8_t *a = data++;
+            if (y % 12 == 0 && x % 6 == 0) {
+              if (format == 0 && *a < (UINT8_MAX / 2)) {
+                fprintf(file, " ");
+              } else {
+                if (*r < 100 && *g < 100 && *b < 100) {
+                  fprintf(file, " ");
+                } else if (*r > *g && *r > *b) {
+                  fprintf(file, "\x1b[31m|\x1b[39m");
+                } else if (*g > *r && *g > *b) {
+                  fprintf(file, "\x1b[32m|\x1b[39m");
+                } else if (*b > *g && *b > *r) {
+                  fprintf(file, "\x1b[34m|\x1b[39m");
+                } else {
+                  fprintf(file, "|");
+                }
+              }
+            }
+          }
+          if (y % 12 == 0) fprintf(file, "\n");
+        }
+        wl_shm_buffer_end_access(shm_buffer);
+        fflush(file);
+      }
+    }
+
+    wl_buffer_send_release(surface->pending->buffer_resource);
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    if (surface->pending->callback != NULL) {
+      wl_callback_send_done(surface->pending->callback->resource, now.tv_sec * 1000 + now.tv_usec / 1000);
+      wl_resource_destroy(surface->pending->callback->resource);
+    }
+
+    y11_surface_state_reset(surface->pending);
+  }
+
+  wl_signal_emit(&surface->commit_signal, surface);
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void
+y11_surface_protocol_set_buffer_transform(struct wl_client *client, struct wl_resource *resource,
+                                          int32_t transform)
+{
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void
+y11_surface_protocol_set_buffer_scale(struct wl_client *client, struct wl_resource *resource, int32_t scale)
+{
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void
+y11_surface_protocol_damage_buffer(struct wl_client *client, struct wl_resource *resource, int32_t x,
+                                   int32_t y, int32_t width, int32_t height)
+{
+}
+
+static const struct wl_surface_interface surface_interface = {
+    .destroy = y11_surface_protocol_destroy,
+    .attach = y11_surface_protocol_attach,
+    .damage = y11_surface_protocol_damage,
+    .frame = y11_surface_protocol_frame,
+    .set_opaque_region = y11_surface_protocol_set_opaque_region,
+    .set_input_region = y11_surface_protocol_set_input_region,
+    .commit = y11_surface_protocol_commit,
+    .set_buffer_transform = y11_surface_protocol_set_buffer_transform,
+    .set_buffer_scale = y11_surface_protocol_set_buffer_scale,
+    .damage_buffer = y11_surface_protocol_damage_buffer,
+};
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+struct y11_surface *
+y11_surface_create(struct wl_client *client, struct y11_compositor *compositor, uint32_t version, uint32_t id)
+{
+  struct y11_surface *surface;
+  struct wl_resource *resource;
+  struct y11_surface_state *surface_state;
 
   surface_state = y11_surface_state_create(client);
   if (surface_state == NULL) goto fail;
@@ -21,12 +192,21 @@ y11_surface_create(struct wl_client* client, struct y11_compositor* compositor, 
 
   wl_signal_init(&surface->commit_signal);
 
+  // 引数idはクライアントが送るもの
+  // この時点ではSurfaceという意味は持っておらず、
+  // ただidに対応するオブジェクト（なんでもあり）を作ってるだけ
   resource = wl_resource_create(client, &wl_surface_interface, version, id);
   if (resource == NULL) goto no_mem_resource;
 
   surface->compositor = compositor;
   surface->pending = surface_state;
   surface->resource = resource;
+
+  // implすることで、このリソースは初めてクライアントのSurfaceリソースとなる
+  // これをしないと、リソースはSurfaceではないただのリソースになってしまう
+  // だから、クライアントがSurfaceリソースを要求した時、サーバーは
+  // 「このidに紐付けられたSurfaceリソースはないな」としてNULLを返してしまう
+  wl_resource_set_implementation(resource, &surface_interface, surface, y11_surface_handle_destroy);
 
   return surface;
 
@@ -41,6 +221,8 @@ fail:
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void
-y11_surface_destroy(struct y11_surface* surface)
+y11_surface_destroy(struct y11_surface *surface)
 {
+  if (surface->pending) y11_surface_state_destroy(surface->pending);
+  free(surface);
 }

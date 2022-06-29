@@ -22,6 +22,14 @@ struct y11_compositor {
 struct y11_compositor*
 y11_compositor_create(void);
 
+// callback
+struct y11_callback {
+  struct wl_resource* resource;
+};
+
+struct y11_callback*
+y11_callback_create(struct wl_client* client, uint32_t id);
+
 // surface state
 struct y11_surface_state {
   struct wl_resource* buffer_resource;
