@@ -53,7 +53,7 @@ y11_surface_protocol_frame(struct wl_client *client, struct wl_resource *resourc
   surface = wl_resource_get_user_data(resource);
   surface->pending->callback = callback;
 }
-#include <stdio.h>
+
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 static void
 y11_surface_protocol_set_opaque_region(struct wl_client *client, struct wl_resource *resource,
